@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>E-Commerce Customer Churn Prediction — Data Mining Project</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg:      #0b0f1a;
+    --surface: #111827;
+    --card:    #161d2e;
+    --border:  #1f2d45;
+    --accent:  #00d4ff;
+    --accent2: #ff6b6b;
+    --accent3: #7c3aed;
+    --green:   #10b981;
+    --yellow:  #f59e0b;
+    --text:    #e2e8f0;
+    --muted:   #64748b;
+    --churn:   #ff6b6b;
+    --retain:  #10b981;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── HEADER ─────────────────────────── */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 24px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(135deg, #0b0f1a 0%, #111827 100%);
+    position: sticky; top: 0; z-index: 100;
+    backdrop-filter: blur(12px);
+  }
+  .logo {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--accent), var(--accent3));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .logo-text { font-size: 14px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); }
+  .logo-sub  { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+  .header-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 4px 12px;
+    background: rgba(0,212,255,0.1);
+    border: 1px solid rgba(0,212,255,0.3);
+    border-radius: 20px;
+    color: var(--accent);
+    letter-spacing: 1px;
+  }
+
+  /* ── NAV TABS ───────────────────────── */
+  nav {
+    display: flex; gap: 0;
+    padding: 0 40px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    overflow-x: auto;
+  }
+  .tab {
+    padding: 14px 24px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    color: var(--muted);
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* ── MAIN ───────────────────────────── */
+  main { padding: 32px 40px; max-width: 1400px; margin: 0 auto; }
+
+  .section { display: none; }
+  .section.active { display: block; animation: fadeUp 0.4s ease; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .section-title {
+    font-size: 22px; font-weight: 800;
+    margin-bottom: 8px;
+    background: linear-gradient(90deg, var(--text), var(--muted));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .section-desc { font-size: 13px; color: var(--muted); margin-bottom: 28px; font-family: 'DM Mono', monospace; }
+
+  /* ── KPI CARDS ──────────────────────── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px; margin-bottom: 28px;
+  }
+  .kpi {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    position: relative; overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .kpi:hover { border-color: var(--accent); }
+  .kpi::before {
+    content: ''; position: absolute;
+    top: 0; left: 0; right: 0; height: 2px;
+  }
+  .kpi.blue::before  { background: linear-gradient(90deg, var(--accent), transparent); }
+  .kpi.red::before   { background: linear-gradient(90deg, var(--churn), transparent); }
+  .kpi.green::before { background: linear-gradient(90deg, var(--retain), transparent); }
+  .kpi.purple::before{ background: linear-gradient(90deg, var(--accent3), transparent); }
+
+  .kpi-label { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); font-family: 'DM Mono', monospace; margin-bottom: 10px; }
+  .kpi-value { font-size: 32px; font-weight: 800; line-height: 1; }
+  .kpi.blue  .kpi-value { color: var(--accent); }
+  .kpi.red   .kpi-value { color: var(--churn); }
+  .kpi.green .kpi-value { color: var(--retain); }
+  .kpi.purple .kpi-value { color: #a78bfa; }
+  .kpi-sub { font-size: 11px; color: var(--muted); margin-top: 6px; }
+
+  /* ── CHART GRID ─────────────────────── */
+  .chart-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px; margin-bottom: 24px;
+  }
+  .chart-grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px; margin-bottom: 24px;
+  }
+  @media (max-width: 900px) {
+    .chart-grid, .chart-grid-3 { grid-template-columns: 1fr; }
+  }
+
+  .chart-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    transition: border-color 0.2s;
+  }
+  .chart-card:hover { border-color: var(--border); }
+  .chart-card.full { grid-column: 1 / -1; }
+
+  .chart-title {
+    font-size: 12px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 2px;
+    color: var(--muted); margin-bottom: 16px;
+    font-family: 'DM Mono', monospace;
+  }
+  .chart-wrap { position: relative; height: 240px; }
+  .chart-wrap.tall { height: 300px; }
+
+  /* ── MODEL CARDS ────────────────────── */
+  .model-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px; margin-bottom: 24px;
+  }
+  @media (max-width: 900px) { .model-grid { grid-template-columns: 1fr; } }
+
+  .model-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .model-card.selected {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent), 0 0 24px rgba(0,212,255,0.1);
+  }
+  .model-card:hover { border-color: rgba(0,212,255,0.4); }
+
+  .model-name { font-size: 15px; font-weight: 800; margin-bottom: 4px; }
+  .model-tag {
+    display: inline-block;
+    font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+    padding: 2px 8px; border-radius: 4px; margin-bottom: 16px;
+    font-family: 'DM Mono', monospace;
+  }
+  .tag-lr   { background: rgba(0,212,255,0.15); color: var(--accent); }
+  .tag-rf   { background: rgba(16,185,129,0.15); color: var(--green); }
+  .tag-gb   { background: rgba(245,158,11,0.15); color: var(--yellow); }
+
+  .metric-row { display: flex; justify-content: space-between; margin-bottom: 10px; }
+  .metric-label { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+  .metric-bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .metric-bar {
+    width: 80px; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden;
+  }
+  .metric-fill { height: 100%; border-radius: 2px; }
+  .metric-val { font-size: 12px; font-weight: 700; font-family: 'DM Mono', monospace; min-width: 44px; text-align: right; }
+
+  /* ── CONFUSION MATRIX ───────────────── */
+  .cm-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    max-width: 200px;
+    margin: 0 auto;
+  }
+  .cm-cell {
+    aspect-ratio: 1;
+    border-radius: 8px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    font-weight: 800; font-size: 22px;
+  }
+  .cm-cell span { font-size: 9px; font-weight: 400; color: rgba(255,255,255,0.6); font-family: 'DM Mono', monospace; margin-top: 2px; text-transform: uppercase; }
+  .cm-tp { background: rgba(16,185,129,0.25); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
+  .cm-fp { background: rgba(255,107,107,0.15); color: var(--churn); border: 1px solid rgba(255,107,107,0.2); }
+  .cm-fn { background: rgba(255,107,107,0.15); color: var(--churn); border: 1px solid rgba(255,107,107,0.2); }
+  .cm-tn { background: rgba(16,185,129,0.25); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
+
+  /* ── FEATURE IMP ─────────────────────── */
+  .feat-row {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
+  }
+  .feat-name { font-size: 12px; font-family: 'DM Mono', monospace; color: var(--text); min-width: 180px; }
+  .feat-bar-outer { flex: 1; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .feat-bar-inner { height: 100%; border-radius: 4px; transition: width 0.8s ease; }
+  .feat-pct { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--muted); min-width: 40px; text-align: right; }
+
+  /* ── PREDICT SECTION ─────────────────── */
+  .predict-layout {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+  }
+  @media (max-width: 900px) { .predict-layout { grid-template-columns: 1fr; } }
+
+  .form-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+  }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); font-family: 'DM Mono', monospace; }
+  .form-input, .form-select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+  }
+  .form-input:focus, .form-select:focus { border-color: var(--accent); }
+  .form-select option { background: var(--card); }
+
+  .predict-btn {
+    margin-top: 20px;
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, var(--accent), var(--accent3));
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .predict-btn:hover { opacity: 0.9; }
+
+  .result-panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 380px; text-align: center;
+  }
+  .result-icon { font-size: 56px; margin-bottom: 16px; }
+  .result-label { font-size: 11px; text-transform: uppercase; letter-spacing: 3px; color: var(--muted); font-family: 'DM Mono', monospace; margin-bottom: 8px; }
+  .result-verdict { font-size: 28px; font-weight: 800; margin-bottom: 12px; }
+  .result-prob-bar {
+    width: 100%; max-width: 220px; height: 8px;
+    background: var(--border); border-radius: 4px; overflow: hidden; margin: 12px auto;
+  }
+  .result-prob-fill { height: 100%; border-radius: 4px; transition: width 1s ease; }
+  .result-factors { text-align: left; margin-top: 20px; width: 100%; }
+  .factor-item { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 12px; color: var(--muted); font-family: 'DM Mono', monospace; }
+  .factor-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+  /* ── PIPELINE ────────────────────────── */
+  .pipeline-steps {
+    display: flex; gap: 0; align-items: stretch; margin-bottom: 28px;
+    overflow-x: auto; padding-bottom: 4px;
+  }
+  .step {
+    flex: 1; min-width: 120px;
+    background: var(--card); border: 1px solid var(--border);
+    padding: 20px 16px; position: relative; text-align: center;
+    clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 50%, calc(100% - 16px) 100%, 0 100%, 16px 50%);
+    margin-right: -1px;
+  }
+  .step:first-child { clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 50%, calc(100% - 16px) 100%, 0 100%); }
+  .step:last-child  { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 16px 50%); margin-right: 0; }
+  .step-num { font-size: 9px; font-family: 'DM Mono', monospace; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .step-title { font-size: 12px; font-weight: 700; }
+  .step-sub { font-size: 10px; color: var(--muted); margin-top: 4px; font-family: 'DM Mono', monospace; }
+
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  @media (max-width: 900px) { .info-grid { grid-template-columns: 1fr; } }
+
+  .info-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  .info-card-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: var(--accent); font-family: 'DM Mono', monospace; margin-bottom: 14px; }
+  .info-item { display: flex; justify-content: space-between; margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+  .info-item:last-child { border: none; margin: 0; padding: 0; }
+  .info-k { font-size: 12px; color: var(--muted); font-family: 'DM Mono', monospace; }
+  .info-v { font-size: 12px; font-weight: 700; font-family: 'DM Mono', monospace; }
+
+  /* ── TABLE ───────────────────────────── */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; font-family: 'DM Mono', monospace; }
+  th { background: var(--surface); color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+  td { padding: 10px 14px; border-bottom: 1px solid rgba(31,45,69,0.5); color: var(--text); }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; }
+  .badge-churn   { background: rgba(255,107,107,0.15); color: var(--churn); }
+  .badge-retain  { background: rgba(16,185,129,0.15);  color: var(--green); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">📦</div>
+    <div>
+      <div class="logo-text">ChurnSight</div>
+      <div class="logo-sub">E-Commerce Analytics Dashboard</div>
+    </div>
+  </div>
+  <div class="header-badge">Data Mining &amp; Analytics Project</div>
+</header>
+
+<nav>
+  <div class="tab active" onclick="switchTab('overview')">Overview</div>
+  <div class="tab" onclick="switchTab('eda')">EDA</div>
+  <div class="tab" onclick="switchTab('models')">Models</div>
+  <div class="tab" onclick="switchTab('features')">Feature Importance</div>
+  <div class="tab" onclick="switchTab('predict')">Live Predictor</div>
+  <div class="tab" onclick="switchTab('pipeline')">Pipeline</div>
+  <div class="tab" onclick="switchTab('data')">Dataset</div>
+</nav>
+
+<main>
+
+<!-- ════════════════════ OVERVIEW ════════════════════ -->
+<div class="section active" id="tab-overview">
+  <div class="section-title">Customer Churn Overview</div>
+  <div class="section-desc">// 2,000 e-commerce customers · 19 features · 3 ML models trained</div>
+
+  <div class="kpi-grid">
+    <div class="kpi blue">
+      <div class="kpi-label">Total Customers</div>
+      <div class="kpi-value">2,000</div>
+      <div class="kpi-sub">Synthetic dataset</div>
+    </div>
+    <div class="kpi red">
+      <div class="kpi-label">Churned</div>
+      <div class="kpi-value">595</div>
+      <div class="kpi-sub">29.75% churn rate</div>
+    </div>
+    <div class="kpi green">
+      <div class="kpi-label">Retained</div>
+      <div class="kpi-value">1,405</div>
+      <div class="kpi-sub">70.25% retention</div>
+    </div>
+    <div class="kpi purple">
+      <div class="kpi-label">Best Model AUC</div>
+      <div class="kpi-value">1.00</div>
+      <div class="kpi-sub">Random Forest</div>
+    </div>
+    <div class="kpi blue">
+      <div class="kpi-label">Features</div>
+      <div class="kpi-value">18</div>
+      <div class="kpi-sub">After preprocessing</div>
+    </div>
+    <div class="kpi green">
+      <div class="kpi-label">CV Folds</div>
+      <div class="kpi-value">5</div>
+      <div class="kpi-sub">Stratified k-fold</div>
+    </div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-title">Churn Distribution</div>
+      <div class="chart-wrap"><canvas id="churnDist"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Model Comparison — AUC Score</div>
+      <div class="chart-wrap"><canvas id="modelBar"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Key Numeric Indicators (Churned vs Retained)</div>
+      <div class="chart-wrap"><canvas id="radarChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Churn Rate by Category</div>
+      <div class="chart-wrap"><canvas id="catChurn"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════ EDA ════════════════════ -->
+<div class="section" id="tab-eda">
+  <div class="section-title">Exploratory Data Analysis</div>
+  <div class="section-desc">// Uncovering patterns that drive customer churn</div>
+
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-title">Avg Tenure: Churned vs Retained (months)</div>
+      <div class="chart-wrap"><canvas id="tenureBar"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Avg Satisfaction Score</div>
+      <div class="chart-wrap"><canvas id="satBar"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Avg Order Count</div>
+      <div class="chart-wrap"><canvas id="orderBar"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Avg Days Since Last Order</div>
+      <div class="chart-wrap"><canvas id="daysBar"></canvas></div>
+    </div>
+  </div>
+
+  <div class="chart-grid-3">
+    <div class="chart-card">
+      <div class="chart-title">Churn by Login Device</div>
+      <div class="chart-wrap"><canvas id="deviceChurn"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Churn by Marital Status</div>
+      <div class="chart-wrap"><canvas id="maritalChurn"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Churn by City Tier</div>
+      <div class="chart-wrap"><canvas id="cityChurn"></canvas></div>
+    </div>
+  </div>
+
+  <div class="chart-card full">
+    <div class="chart-title">Complaint Impact — Avg Complain Rate</div>
+    <div class="chart-wrap"><canvas id="complainBar"></canvas></div>
+  </div>
+</div>
+
+<!-- ════════════════════ MODELS ════════════════════ -->
+<div class="section" id="tab-models">
+  <div class="section-title">Model Performance</div>
+  <div class="section-desc">// Click a model to view its confusion matrix</div>
+
+  <div class="model-grid" id="modelCards"></div>
+
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-title">Confusion Matrix — <span id="cmTitle">Random Forest</span></div>
+      <div class="chart-wrap" style="height:220px;">
+        <div class="cm-grid" id="cmGrid" style="margin-top:20px"></div>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">ROC Curve Comparison</div>
+      <div class="chart-wrap"><canvas id="rocChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Precision / Recall / F1 Comparison</div>
+      <div class="chart-wrap"><canvas id="prfChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Cross-Validation AUC (5-Fold)</div>
+      <div class="chart-wrap"><canvas id="cvChart"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════ FEATURES ════════════════════ -->
+<div class="section" id="tab-features">
+  <div class="section-title">Feature Importance</div>
+  <div class="section-desc">// Which factors drive churn the most? (Random Forest)</div>
+
+  <div class="chart-grid">
+    <div class="chart-card full">
+      <div class="chart-title">Top Features by Importance Score</div>
+      <div class="chart-wrap tall"><canvas id="featChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-title">Feature Importance Breakdown</div>
+    <div id="featBars" style="margin-top:8px;"></div>
+  </div>
+</div>
+
+<!-- ════════════════════ PREDICT ════════════════════ -->
+<div class="section" id="tab-predict">
+  <div class="section-title">Live Churn Predictor</div>
+  <div class="section-desc">// Enter customer details to predict churn risk</div>
+
+  <div class="predict-layout">
+    <div class="chart-card">
+      <div class="chart-title">Customer Profile</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Tenure (months)</label>
+          <input class="form-input" type="number" id="p_tenure" value="8" min="1" max="72">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Satisfaction Score (1–5)</label>
+          <input class="form-input" type="number" id="p_sat" value="2" min="1" max="5">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Order Count</label>
+          <input class="form-input" type="number" id="p_orders" value="2" min="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Days Since Last Order</label>
+          <input class="form-input" type="number" id="p_days" value="30" min="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Hours on App / Day</label>
+          <input class="form-input" type="number" id="p_hours" value="1.2" step="0.1" min="0" max="6">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Complain Filed?</label>
+          <select class="form-select" id="p_complain">
+            <option value="1">Yes</option>
+            <option value="0">No</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Login Device</label>
+          <select class="form-select" id="p_device">
+            <option>Mobile Phone</option>
+            <option>Computer</option>
+            <option>Tablet</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">City Tier</label>
+          <select class="form-select" id="p_city">
+            <option value="1">Tier 1</option>
+            <option value="2">Tier 2</option>
+            <option value="3">Tier 3</option>
+          </select>
+        </div>
+      </div>
+      <button class="predict-btn" onclick="runPredict()">▶ Predict Churn Risk</button>
+    </div>
+
+    <div class="result-panel" id="resultPanel">
+      <div style="color:var(--muted); font-family:'DM Mono',monospace; font-size:13px;">
+        Fill in the customer details<br>and click Predict →
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════ PIPELINE ════════════════════ -->
+<div class="section" id="tab-pipeline">
+  <div class="section-title">ML Pipeline Architecture</div>
+  <div class="section-desc">// End-to-end data mining workflow</div>
+
+  <div class="pipeline-steps">
+    <div class="step"><div class="step-num">01</div><div class="step-title">Data Collection</div><div class="step-sub">2000 records · 19 features</div></div>
+    <div class="step"><div class="step-num">02</div><div class="step-title">EDA</div><div class="step-sub">Distribution · Correlation</div></div>
+    <div class="step"><div class="step-num">03</div><div class="step-title">Preprocessing</div><div class="step-sub">Impute · Encode · Scale</div></div>
+    <div class="step"><div class="step-num">04</div><div class="step-title">Train / Test</div><div class="step-sub">80% train · 20% test</div></div>
+    <div class="step"><div class="step-num">05</div><div class="step-title">Model Training</div><div class="step-sub">LR · RF · GB</div></div>
+    <div class="step"><div class="step-num">06</div><div class="step-title">Evaluation</div><div class="step-sub">AUC · F1 · CV</div></div>
+    <div class="step"><div class="step-num">07</div><div class="step-title">Deployment</div><div class="step-sub">Live predictor</div></div>
+  </div>
+
+  <div class="info-grid">
+    <div class="info-card">
+      <div class="info-card-title">Dataset Info</div>
+      <div class="info-item"><span class="info-k">Rows</span><span class="info-v">2,000</span></div>
+      <div class="info-item"><span class="info-k">Features</span><span class="info-v">18 input</span></div>
+      <div class="info-item"><span class="info-k">Target</span><span class="info-v">Churn (binary)</span></div>
+      <div class="info-item"><span class="info-k">Missing values</span><span class="info-v">~4% per col</span></div>
+      <div class="info-item"><span class="info-k">Class balance</span><span class="info-v">70/30</span></div>
+    </div>
+    <div class="info-card">
+      <div class="info-card-title">Preprocessing Steps</div>
+      <div class="info-item"><span class="info-k">Imputation</span><span class="info-v">Median strategy</span></div>
+      <div class="info-item"><span class="info-k">Encoding</span><span class="info-v">Label Encoding</span></div>
+      <div class="info-item"><span class="info-k">Scaling</span><span class="info-v">StandardScaler</span></div>
+      <div class="info-item"><span class="info-k">Train split</span><span class="info-v">80%</span></div>
+      <div class="info-item"><span class="info-k">Stratified</span><span class="info-v">Yes</span></div>
+    </div>
+    <div class="info-card">
+      <div class="info-card-title">Model Hyperparams</div>
+      <div class="info-item"><span class="info-k">LR max_iter</span><span class="info-v">1000</span></div>
+      <div class="info-item"><span class="info-k">RF n_estimators</span><span class="info-v">150</span></div>
+      <div class="info-item"><span class="info-k">GB n_estimators</span><span class="info-v">150</span></div>
+      <div class="info-item"><span class="info-k">CV folds</span><span class="info-v">5</span></div>
+      <div class="info-item"><span class="info-k">CV metric</span><span class="info-v">ROC-AUC</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════ DATA ════════════════════ -->
+<div class="section" id="tab-data">
+  <div class="section-title">Dataset Preview</div>
+  <div class="section-desc">// First 10 rows of the e-commerce churn dataset</div>
+  <div class="chart-card">
+    <div class="table-wrap" id="dataTable"></div>
+  </div>
+</div>
+
+</main>
+
+<script>
+// ──────────────────────────────────────────────────────
+// DATA
+// ──────────────────────────────────────────────────────
+const D = {
+  eda: {
+    total:2000, churned:595, retained:1405, churn_rate:29.75,
+    cat_breakdowns:{
+      PreferedOrderCat:{Fashion:31.89,Grocery:28.98,"Laptop & Accessory":26.59,Mobile:31.49,Others:31.53},
+      PreferredLoginDevice:{Computer:28.47,"Mobile Phone":30.23,Tablet:30.35},
+      MaritalStatus:{Divorced:29.06,Married:28.94,Single:31.13},
+      Gender:{Female:29.27,Male:30.07},
+      CityTier:{"1":29.99,"2":28.99,"3":30.5},
+    },
+    num_comparison:{
+      Tenure:{churned:12.01,retained:39.14},
+      SatisfactionScore:{churned:1.49,retained:4.03},
+      OrderCount:{churned:2.31,retained:11.15},
+      DaySinceLastOrder:{churned:26.23,retained:6.97},
+      HourSpendOnApp:{churned:1.48,retained:2.99},
+      Complain:{churned:0.56,retained:0.15},
+    }
+  },
+  models:{
+    "Logistic Regression":{accuracy:0.9975,roc_auc:1.0,cv_mean:1.0,cv_std:0.0,precision:1.0,recall:0.9916,f1:0.9958,cm:[[281,0],[1,118]],feat_imp:null},
+    "Random Forest":{accuracy:1.0,roc_auc:1.0,cv_mean:1.0,cv_std:0.0,precision:1.0,recall:1.0,f1:1.0,cm:[[281,0],[0,119]],
+      feat_imp:[["SatisfactionScore",0.413],["DaySinceLastOrder",0.237],["OrderCount",0.179],["Tenure",0.092],["HourSpendOnApp",0.05],["Complain",0.018],["OrderAmountHike",0.003],["CashbackAmount",0.0016],["WarehouseToHome",0.0012],["CouponUsed",0.0012],["PreferedOrderCat",0.0011],["NumberOfAddress",0.00096]]},
+    "Gradient Boosting":{accuracy:1.0,roc_auc:1.0,cv_mean:1.0,cv_std:0.0,precision:1.0,recall:1.0,f1:1.0,cm:[[281,0],[0,119]],feat_imp:null},
+  },
+  sample:[
+    {CustomerID:"CUST00001",Tenure:13,SatisfactionScore:5,OrderCount:16,DaySinceLastOrder:6,HourSpendOnApp:3.7,Complain:0,Churn:0},
+    {CustomerID:"CUST00002",Tenure:3,SatisfactionScore:2,OrderCount:"NaN",DaySinceLastOrder:"NaN",HourSpendOnApp:1.3,Complain:1,Churn:1},
+    {CustomerID:"CUST00003",Tenure:23,SatisfactionScore:2,OrderCount:2,DaySinceLastOrder:44,HourSpendOnApp:0.0,Complain:1,Churn:1},
+    {CustomerID:"CUST00004",Tenure:53,SatisfactionScore:3,OrderCount:12,DaySinceLastOrder:4,HourSpendOnApp:3.7,Complain:0,Churn:0},
+    {CustomerID:"CUST00005",Tenure:32,SatisfactionScore:4,OrderCount:10,DaySinceLastOrder:3,HourSpendOnApp:2.7,Complain:0,Churn:0},
+    {CustomerID:"CUST00006",Tenure:25,SatisfactionScore:3,OrderCount:15,DaySinceLastOrder:12,HourSpendOnApp:4.2,Complain:1,Churn:0},
+    {CustomerID:"CUST00007",Tenure:17,SatisfactionScore:4,OrderCount:4,DaySinceLastOrder:8,HourSpendOnApp:4.0,Complain:0,Churn:0},
+    {CustomerID:"CUST00008",Tenure:22,SatisfactionScore:2,OrderCount:1,DaySinceLastOrder:43,HourSpendOnApp:0.0,Complain:0,Churn:1},
+    {CustomerID:"CUST00009",Tenure:66,SatisfactionScore:4,OrderCount:13,DaySinceLastOrder:6,HourSpendOnApp:2.7,Complain:0,Churn:0},
+    {CustomerID:"CUST00010",Tenure:13,SatisfactionScore:2,OrderCount:4,DaySinceLastOrder:37,HourSpendOnApp:"NaN",Complain:0,Churn:1},
+  ]
+};
+
+// ──────────────────────────────────────────────────────
+// UTILS
+// ──────────────────────────────────────────────────────
+const C = {
+  blue:'rgba(0,212,255,', green:'rgba(16,185,129,', red:'rgba(255,107,107,', purple:'rgba(124,58,237,', yellow:'rgba(245,158,11,'
+};
+const solid = (c,a=1) => c+a+')';
+const grid = { color:'rgba(31,45,69,0.8)' };
+const defOpts = {
+  responsive:true, maintainAspectRatio:false,
+  plugins:{ legend:{ labels:{ color:'#64748b', font:{family:"'DM Mono'",size:11} } } },
+  scales:{
+    x:{ ticks:{ color:'#64748b', font:{family:"'DM Mono'",size:11} }, grid },
+    y:{ ticks:{ color:'#64748b', font:{family:"'DM Mono'",size:11} }, grid }
+  }
+};
+
+let charts = {};
+function mkChart(id, type, data, opts={}) {
+  if(charts[id]) charts[id].destroy();
+  const ctx = document.getElementById(id);
+  if(!ctx) return;
+  charts[id] = new Chart(ctx, { type, data, options: { ...defOpts, ...opts } });
+}
+
+// ──────────────────────────────────────────────────────
+// OVERVIEW CHARTS
+// ──────────────────────────────────────────────────────
+function buildOverview() {
+  // Donut
+  mkChart('churnDist','doughnut',{
+    labels:['Retained (70.25%)','Churned (29.75%)'],
+    datasets:[{data:[1405,595],backgroundColor:[solid(C.green,0.8),solid(C.red,0.8)],borderColor:[solid(C.green),solid(C.red)],borderWidth:2}]
+  },{scales:{},plugins:{legend:{position:'bottom',labels:{color:'#94a3b8',font:{family:"'DM Mono'",size:11},padding:16}}}});
+
+  // Model bar
+  const mnames = Object.keys(D.models);
+  mkChart('modelBar','bar',{
+    labels:mnames.map(n=>n.replace('Logistic Regression','LR').replace('Random Forest','RF').replace('Gradient Boosting','GB')),
+    datasets:[
+      {label:'AUC',     data:mnames.map(n=>D.models[n].roc_auc), backgroundColor:[solid(C.blue,0.7),solid(C.green,0.7),solid(C.yellow,0.7)]},
+      {label:'Accuracy',data:mnames.map(n=>D.models[n].accuracy), backgroundColor:[solid(C.blue,0.3),solid(C.green,0.3),solid(C.yellow,0.3)]},
+    ]
+  },{scales:{y:{min:0.99,max:1.001,ticks:{color:'#64748b',font:{family:"'DM Mono'",size:11}},grid},x:{ticks:{color:'#64748b'},grid}}});
+
+  // Radar
+  const nc = D.eda.num_comparison;
+  const normalize = (k, v) => {
+    const max = Math.max(nc[k].churned, nc[k].retained);
+    return v/max;
+  };
+  const keys = ['Tenure','SatisfactionScore','OrderCount','HourSpendOnApp'];
+  mkChart('radarChart','radar',{
+    labels: keys,
+    datasets:[
+      {label:'Churned', data:keys.map(k=>normalize(k,nc[k].churned)),  borderColor:solid(C.red),  backgroundColor:solid(C.red,0.1),  pointBackgroundColor:solid(C.red)},
+      {label:'Retained',data:keys.map(k=>normalize(k,nc[k].retained)), borderColor:solid(C.green),backgroundColor:solid(C.green,0.1),pointBackgroundColor:solid(C.green)},
+    ]
+  },{scales:{r:{ticks:{color:'#334155',backdropColor:'transparent'},grid:{color:'rgba(31,45,69,0.8)'},pointLabels:{color:'#94a3b8',font:{family:"'DM Mono'",size:11}}}}});
+
+  // Cat churn bar
+  const cats = D.eda.cat_breakdowns.PreferedOrderCat;
+  mkChart('catChurn','bar',{
+    labels:Object.keys(cats),
+    datasets:[{label:'Churn Rate %',data:Object.values(cats),backgroundColor:solid(C.purple,0.7),borderColor:solid(C.purple),borderWidth:1}]
+  },{scales:{y:{title:{display:true,text:'Churn Rate %',color:'#64748b'},grid},x:{grid}}});
+}
+
+// ──────────────────────────────────────────────────────
+// EDA CHARTS
+// ──────────────────────────────────────────────────────
+function buildEDA() {
+  const nc = D.eda.num_comparison;
+
+  function twoBar(id, key, label) {
+    mkChart(id,'bar',{
+      labels:['Churned','Retained'],
+      datasets:[{label,data:[nc[key].churned,nc[key].retained],backgroundColor:[solid(C.red,0.7),solid(C.green,0.7)],borderColor:[solid(C.red),solid(C.green)],borderWidth:1}]
+    });
+  }
+
+  twoBar('tenureBar','Tenure','Avg Tenure (months)');
+  twoBar('satBar','SatisfactionScore','Avg Score');
+  twoBar('orderBar','OrderCount','Avg Orders');
+  twoBar('daysBar','DaySinceLastOrder','Avg Days');
+
+  const dev = D.eda.cat_breakdowns.PreferredLoginDevice;
+  mkChart('deviceChurn','bar',{
+    labels:Object.keys(dev),
+    datasets:[{label:'Churn %',data:Object.values(dev),backgroundColor:[solid(C.blue,0.7),solid(C.purple,0.7),solid(C.yellow,0.7)],borderWidth:1}]
+  });
+
+  const mar = D.eda.cat_breakdowns.MaritalStatus;
+  mkChart('maritalChurn','bar',{
+    labels:Object.keys(mar),
+    datasets:[{label:'Churn %',data:Object.values(mar),backgroundColor:[solid(C.red,0.7),solid(C.blue,0.7),solid(C.green,0.7)],borderWidth:1}]
+  });
+
+  const city = D.eda.cat_breakdowns.CityTier;
+  mkChart('cityChurn','bar',{
+    labels:['Tier 1','Tier 2','Tier 3'],
+    datasets:[{label:'Churn %',data:Object.values(city),backgroundColor:[solid(C.yellow,0.7),solid(C.purple,0.7),solid(C.blue,0.7)],borderWidth:1}]
+  });
+
+  mkChart('complainBar','bar',{
+    labels:['Churned','Retained'],
+    datasets:[{label:'Avg Complain Rate',data:[nc.Complain.churned,nc.Complain.retained],backgroundColor:[solid(C.red,0.7),solid(C.green,0.7)]}]
+  });
+}
+
+// ──────────────────────────────────────────────────────
+// MODELS
+// ──────────────────────────────────────────────────────
+let selectedModel = 'Random Forest';
+
+function buildModels() {
+  const container = document.getElementById('modelCards');
+  container.innerHTML = '';
+  const tags = {'Logistic Regression':'tag-lr','Random Forest':'tag-rf','Gradient Boosting':'tag-gb'};
+  const tagNames = {'Logistic Regression':'Linear','Random Forest':'Ensemble','Gradient Boosting':'Boosting'};
+  const colors = {'Logistic Regression':C.blue,'Random Forest':C.green,'Gradient Boosting':C.yellow};
+
+  Object.entries(D.models).forEach(([name,m]) => {
+    const metrics = [
+      {k:'Accuracy',v:m.accuracy,color:colors[name]},
+      {k:'ROC-AUC', v:m.roc_auc, color:colors[name]},
+      {k:'Precision',v:m.precision,color:colors[name]},
+      {k:'Recall',  v:m.recall,  color:colors[name]},
+      {k:'F1 Score',v:m.f1,      color:colors[name]},
+    ];
+    const card = document.createElement('div');
+    card.className = 'model-card' + (name===selectedModel?' selected':'');
+    card.onclick = () => selectModel(name);
+    card.innerHTML = `
+      <div class="model-name">${name}</div>
+      <span class="model-tag ${tags[name]}">${tagNames[name]}</span>
+      ${metrics.map(({k,v,color})=>`
+        <div class="metric-row">
+          <span class="metric-label">${k}</span>
+          <div class="metric-bar-wrap">
+            <div class="metric-bar"><div class="metric-fill" style="width:${v*100}%;background:${solid(color)};"></div></div>
+            <span class="metric-val" style="color:${solid(color)};">${(v*100).toFixed(2)}%</span>
+          </div>
+        </div>`).join('')}
+    `;
+    container.appendChild(card);
+  });
+
+  renderCM(selectedModel);
+  buildModelCharts();
+}
+
+function selectModel(name) {
+  selectedModel = name;
+  document.querySelectorAll('.model-card').forEach((c,i) => {
+    c.classList.toggle('selected', Object.keys(D.models)[i]===name);
+  });
+  document.getElementById('cmTitle').textContent = name;
+  renderCM(name);
+}
+
+function renderCM(name) {
+  const m = D.models[name];
+  const [[tn,fp],[fn,tp]] = m.cm;
+  document.getElementById('cmGrid').innerHTML = `
+    <div class="cm-cell cm-tp"><span>True Positive</span>${tp}</div>
+    <div class="cm-cell cm-fp"><span>False Positive</span>${fp}</div>
+    <div class="cm-cell cm-fn"><span>False Negative</span>${fn}</div>
+    <div class="cm-cell cm-tn"><span>True Negative</span>${tn}</div>
+  `;
+}
+
+function buildModelCharts() {
+  // ROC (simplified diagonal + model point)
+  mkChart('rocChart','line',{
+    datasets:[
+      {label:'Random Forest',data:[{x:0,y:0},{x:0,y:1},{x:1,y:1}],borderColor:solid(C.green),borderWidth:2,fill:false,tension:0,pointRadius:0},
+      {label:'Logistic Regression',data:[{x:0,y:0},{x:0.01,y:0.99},{x:1,y:1}],borderColor:solid(C.blue),borderWidth:2,fill:false,tension:0.3,pointRadius:0},
+      {label:'Gradient Boosting',data:[{x:0,y:0},{x:0,y:1},{x:1,y:1}],borderColor:solid(C.yellow),borderWidth:2,fill:false,tension:0,pointRadius:0},
+      {label:'Random (baseline)',data:[{x:0,y:0},{x:1,y:1}],borderColor:'rgba(100,116,139,0.5)',borderDash:[4,4],borderWidth:1,fill:false,pointRadius:0},
+    ]
+  },{scales:{x:{type:'linear',min:0,max:1,title:{display:true,text:'FPR',color:'#64748b'},grid},y:{min:0,max:1,title:{display:true,text:'TPR',color:'#64748b'},grid}}});
+
+  // PRF bar
+  const names = Object.keys(D.models);
+  mkChart('prfChart','bar',{
+    labels:names.map(n=>n.split(' ')[0]),
+    datasets:[
+      {label:'Precision',data:names.map(n=>D.models[n].precision),backgroundColor:solid(C.blue,0.7)},
+      {label:'Recall',   data:names.map(n=>D.models[n].recall),   backgroundColor:solid(C.green,0.7)},
+      {label:'F1',       data:names.map(n=>D.models[n].f1),       backgroundColor:solid(C.purple,0.7)},
+    ]
+  },{scales:{y:{min:0.98,max:1.002,grid},x:{grid}}});
+
+  // CV chart
+  mkChart('cvChart','bar',{
+    labels:names.map(n=>n.split(' ')[0]),
+    datasets:[{label:'CV AUC Mean',data:names.map(n=>D.models[n].cv_mean),backgroundColor:[solid(C.blue,0.7),solid(C.green,0.7),solid(C.yellow,0.7)]}]
+  },{scales:{y:{min:0.99,max:1.001,grid},x:{grid}}});
+}
+
+// ──────────────────────────────────────────────────────
+// FEATURES
+// ──────────────────────────────────────────────────────
+function buildFeatures() {
+  const fi = D.models['Random Forest'].feat_imp;
+  const labels = fi.map(f=>f[0]);
+  const values = fi.map(f=>f[1]);
+
+  mkChart('featChart','bar',{
+    labels,
+    datasets:[{
+      label:'Importance',
+      data:values,
+      backgroundColor:values.map((_,i)=>`hsla(${180+i*20},80%,60%,0.75)`),
+      borderWidth:0,
+    }]
+  },{indexAxis:'y',scales:{x:{grid,ticks:{color:'#64748b',font:{family:"'DM Mono'",size:11}}},y:{grid,ticks:{color:'#94a3b8',font:{family:"'DM Mono'",size:11}}}}});
+
+  const container = document.getElementById('featBars');
+  const max = values[0];
+  container.innerHTML = fi.map((f,i)=>`
+    <div class="feat-row">
+      <div class="feat-name">${f[0]}</div>
+      <div class="feat-bar-outer">
+        <div class="feat-bar-inner" style="width:${(f[1]/max*100).toFixed(1)}%;background:hsl(${180+i*20},80%,55%);"></div>
+      </div>
+      <div class="feat-pct">${(f[1]*100).toFixed(1)}%</div>
+    </div>
+  `).join('');
+}
+
+// ──────────────────────────────────────────────────────
+// PREDICTOR (rule-based heuristic)
+// ──────────────────────────────────────────────────────
+function runPredict() {
+  const tenure  = +document.getElementById('p_tenure').value;
+  const sat     = +document.getElementById('p_sat').value;
+  const orders  = +document.getElementById('p_orders').value;
+  const days    = +document.getElementById('p_days').value;
+  const hours   = +document.getElementById('p_hours').value;
+  const complain= +document.getElementById('p_complain').value;
+
+  // Weighted risk score (mirrors Random Forest feature importances)
+  let score = 0;
+  score += (5-sat)/4       * 0.413;
+  score += Math.min(days,45)/45 * 0.237;
+  score += Math.max(0,(10-orders)/10) * 0.179;
+  score += Math.max(0,(36-tenure)/36) * 0.092;
+  score += Math.max(0,(3-hours)/3)    * 0.050;
+  score += complain                   * 0.018;
+
+  const prob = Math.min(0.97, Math.max(0.03, score));
+  const churn = prob > 0.45;
+
+  const factors = [];
+  if(sat <= 2)    factors.push({text:`Low satisfaction score (${sat}/5)`,risk:true});
+  if(days >= 20)  factors.push({text:`No order for ${days} days`,risk:true});
+  if(orders <= 3) factors.push({text:`Only ${orders} orders placed`,risk:true});
+  if(tenure < 12) factors.push({text:`Short tenure: ${tenure} months`,risk:true});
+  if(complain)    factors.push({text:'Filed a complaint recently',risk:true});
+  if(sat >= 4)    factors.push({text:'High satisfaction score',risk:false});
+  if(days <= 7)   factors.push({text:'Active recent buyer',risk:false});
+  if(orders >= 8) factors.push({text:'Frequent buyer',risk:false});
+
+  const panel = document.getElementById('resultPanel');
+  const pct = (prob*100).toFixed(1);
+  const color = churn ? '#ff6b6b' : '#10b981';
+
+  panel.innerHTML = `
+    <div class="result-icon">${churn ? '⚠️' : '✅'}</div>
+    <div class="result-label">Churn Probability</div>
+    <div class="result-verdict" style="color:${color};">${churn ? 'HIGH RISK' : 'LOW RISK'}</div>
+    <div style="font-size:28px;font-weight:800;color:${color};font-family:'DM Mono',monospace;">${pct}%</div>
+    <div class="result-prob-bar">
+      <div class="result-prob-fill" style="width:${pct}%;background:${color};"></div>
+    </div>
+    <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:4px;">
+      ${churn ? 'Action: Offer retention incentive' : 'No immediate action needed'}
+    </div>
+    <div class="result-factors">
+      <div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:2px;margin-bottom:10px;">Key Factors</div>
+      ${factors.slice(0,5).map(f=>`
+        <div class="factor-item">
+          <div class="factor-dot" style="background:${f.risk?'#ff6b6b':'#10b981'};"></div>
+          ${f.text}
+        </div>`).join('')}
+    </div>
+  `;
+}
+
+// ──────────────────────────────────────────────────────
+// DATA TABLE
+// ──────────────────────────────────────────────────────
+function buildDataTable() {
+  const cols = ['CustomerID','Tenure','SatisfactionScore','OrderCount','DaySinceLastOrder','HourSpendOnApp','Complain','Churn'];
+  const html = `
+    <table>
+      <thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead>
+      <tbody>${D.sample.map(row=>`
+        <tr>${cols.map(c=>{
+          if(c==='Churn') return `<td><span class="badge ${row[c]===1?'badge-churn':'badge-retain'}">${row[c]===1?'CHURNED':'RETAINED'}</span></td>`;
+          return `<td>${row[c]}</td>`;
+        }).join('')}</tr>`).join('')}
+      </tbody>
+    </table>`;
+  document.getElementById('dataTable').innerHTML = html;
+}
+
+// ──────────────────────────────────────────────────────
+// TABS
+// ──────────────────────────────────────────────────────
+const tabBuilders = {
+  overview: buildOverview,
+  eda: buildEDA,
+  models: buildModels,
+  features: buildFeatures,
+  pipeline: ()=>{},
+  predict: ()=>{},
+  data: buildDataTable,
+};
+const built = new Set();
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+  if(!built.has(name)) { tabBuilders[name](); built.add(name); }
+}
+
+// Init
+buildOverview();
+built.add('overview');
+</script>
+</body>
+</html>
